@@ -1,0 +1,56 @@
+# GitHub Actions 工作流用于部署到 GitHub Pages
+# 文档：https://docs.github.com/en/pages/deploying-github-pages/about-github-pages
+
+name: Deploy to GitHub Pages
+
+on:
+  # 推送到 main 分支时触发
+  push:
+    branches:
+      - main
+    # 仅当 docs-gh-pages 目录中的文件更改时才触发
+    paths:
+      - 'docs-gh-pages/**'
+
+  # 允许手动运行工作流
+  workflow_dispatch:
+
+# 设置 GITHUB_TOKEN 的权限
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 只允许同时运行一个部署
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  # 部署工作
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+
+    steps:
+      # 检出代码
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 设置 Pages 环境
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      # 上传构建产物（此项目无需构建，直接上传 docs-gh-pages 目录）
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          # 上传 docs-gh-pages 目录的内容
+          path: './docs-gh-pages'
+
+      # 部署到 GitHub Pages
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

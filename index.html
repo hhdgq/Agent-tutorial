@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Agent 教程</title>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+  <meta name="description" content="AI Agent 教程 - 从零开始学习构建智能代理">
+  <meta name="keywords" content="AI Agent, ReAct, LLM, 人工智能，教程">
+
+  <!-- docsify 主题样式 -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/docsify@latest/lib/themes/vue.css">
+  <!-- 代码高亮主题 -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@latest/themes/prism-tomorrow.min.css">
+
+  <!-- 自定义样式 -->
+  <style>
+    :root {
+      --theme-color: #42b983;
+      --theme-color-light: #5bc0de;
+    }
+
+    .sidebar {
+      background-color: #fafafa;
+    }
+
+    .sidebar-nav > ul > li > a:first-child {
+      font-weight: 600;
+      color: #2c3e50;
+    }
+
+    .markdown-section h1 {
+      color: #2c3e50;
+    }
+
+    .markdown-section h2 {
+      color: #34495e;
+      border-bottom: 2px solid var(--theme-color);
+      padding-bottom: 0.5em;
+    }
+
+    .markdown-section blockquote {
+      border-left: 4px solid var(--theme-color);
+      background-color: #f8f9fa;
+    }
+
+    .markdown-section code {
+      background-color: #f6f8fa;
+      border-radius: 3px;
+      padding: 0.2em 0.4em;
+    }
+
+    .markdown-section pre {
+      background-color: #1e1e1e;
+      border-radius: 6px;
+    }
+
+    /* Mermaid 图表居中 */
+    .mermaid {
+      text-align: center;
+      margin: 1em 0;
+    }
+
+    /* 响应式表格 */
+    .markdown-section table {
+      display: block;
+      overflow-x: auto;
+    }
+
+    /* 封面页样式 */
+    .cover {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    .cover h1 {
+      color: white;
+      font-size: 3em;
+    }
+
+    .cover .mask {
+      background-color: rgba(0, 0, 0, 0.4);
+    }
+
+    /* 目录导航链接 */
+    .sidebar-nav li {
+      margin: 0.5em 0;
+    }
+
+    .sidebar-nav a:hover {
+      color: var(--theme-color);
+      text-decoration: underline;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="app">加载中...</div>
+
+  <script>
+    window.$docsify = {
+      // 基本信息
+      name: 'AI Agent 教程',
+      repo: '',  // GitHub 仓库链接（可选）
+
+      // 加载配置
+      loadSidebar: true,
+      loadNavbar: false,
+      coverpage: false,  // 不使用封面页，直接显示首页
+      subMaxLevel: 3,
+      maxLevel: 3,
+      relativePath: true,  // 启用相对路径
+
+      // 路由模式
+      routeMode: 'hash',
+
+      // 首页
+      homepage: 'README.md',
+
+      // 不显示默认首页
+      onlyCover: false,
+
+      // 搜索插件配置
+      search: {
+        paths: 'auto',
+        placeholder: {
+          '/zh-cn/': '搜索',
+          '/': 'Search'
+        },
+        noData: {
+          '/zh-cn/': '找不到结果',
+          '/': 'No results'
+        },
+        depth: 4,
+        hideOtherSidebarContent: false,
+        namespace: 'docsify-search',
+      },
+
+      // 分页导航
+      pagination: {
+        crossChapter: true,
+        crossChapterText: true,
+      },
+
+      // Markdown 配置
+      markdown: {
+        breaks: true,
+        gfm: true,
+      },
+
+      // 代码高亮
+      prism: {
+        css: {
+          light: '@prismjs/themes/prism-tomorrow.css',
+          dark: '@prismjs/themes/prism-tomorrow.css',
+        }
+      },
+
+      // 插件配置
+      plugins: [
+        // 自定义插件： mermaid 支持
+        function(hook, vm) {
+          hook.init(function() {
+            // 加载 mermaid
+            if (typeof window.mermaid === 'undefined') {
+              var script = document.createElement('script');
+              script.src = 'https://cdn.jsdelivr.net/npm/mermaid@latest/dist/mermaid.min.js';
+              script.onload = function() {
+                mermaid.initialize({
+                  startOnLoad: false,
+                  theme: 'default',
+                  securityLevel: 'loose',
+                });
+              };
+              document.head.appendChild(script);
+            }
+          });
+
+          hook.doneEach(function() {
+            // 渲染 mermaid 图表
+            var elements = document.querySelectorAll('.markdown-section pre > code.language-mermaid');
+            if (elements.length > 0) {
+              // 确保 mermaid 已加载
+              if (typeof mermaid !== 'undefined') {
+                mermaid.init(undefined, elements, function(code) {
+                  return code;
+                });
+              }
+            }
+          });
+        }
+      ],
+
+      // 别名配置
+      alias: {
+        '/.*/README.md': '/_sidebar.md',
+        '/README.md': '/README.md',
+      }
+    };
+  </script>
+
+  <!-- docsify 核心脚本 -->
+  <script src="https://cdn.jsdelivr.net/npm/docsify@latest/lib/docsify.min.js"></script>
+
+  <!-- 搜索插件 -->
+  <script src="https://cdn.jsdelivr.net/npm/docsify@latest/lib/plugins/search.min.js"></script>
+
+  <!-- 代码高亮插件 -->
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@latest/components/prism-python.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@latest/components/prism-bash.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@latest/components/prism-json.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@latest/components/prism-yaml.min.js"></script>
+
+  <!-- 分页插件 -->
+  <script src="https://cdn.jsdelivr.net/npm/docsify-pagination@latest/dist/docsify-pagination.min.js"></script>
+
+  <!-- 图片缩放插件 -->
+  <script src="https://cdn.jsdelivr.net/npm/docsify-zoom-image@latest/dist/docsify-zoom-image.min.js"></script>
+
+  <!-- 字数统计插件 -->
+  <script src="https://cdn.jsdelivr.net/npm/docsify-word-count@latest/dist/plugin.min.js"></script>
+
+  <!-- 外部链接插件 -->
+  <script src="https://cdn.jsdelivr.net/npm/docsify-external-link@latest/dist/docsify-external-link.min.js"></script>
+
+  <!-- Mermaid 渲染插件 -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@latest/dist/mermaid.min.js"></script>
+  <script>
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'default',
+      securityLevel: 'loose',
+    });
+  </script>
+
+  <!-- 复制提示 -->
+  <script>
+    // 复制代码时显示成功提示
+    document.addEventListener('copy', function(e) {
+      console.log('代码已复制到剪贴板');
+    });
+  </script>
+</body>
+</html>
