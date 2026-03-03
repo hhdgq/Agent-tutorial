@@ -29,7 +29,64 @@
 
 # 1. Skills 基础概念
 
+> **本节导读**：这是理解整个 Skills 系统的基础。如果你只读一节，请读这一节。我们会用生活化的例子解释什么是 Skills，以及为什么它如此重要。
+>
+> **核心问题**：
+> - Skills 到底是什么？（用一句话解释）
+> - Skills 和 Tools 有什么区别？
+> - 为什么需要 Skills 而不是只用 Tools？
+
+---
+
 ## 1.1 什么是 Skills？
+
+### 一句话解释
+
+**Skills（技能）是 Agent 的"专业化能力包"** —— 它把完成某类专业任务所需的知识、工具和行为规范打包在一起，让 Agent 在遇到相关任务时能够"专业地"处理。
+
+### 生动类比：职业技能证书体系
+
+理解 Skills 的一个好类比是**人类社会的职业技能证书体系**：
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    职业技能证书类比                          │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  想象你要招聘一个团队完成以下任务：                          │
+│                                                             │
+│  任务 1：审查一段 Python 代码                                │
+│  任务 2：将技术文档从英文翻译成中文                          │
+│  任务 3：分析销售数据并生成可视化报告                        │
+│                                                             │
+│  你不会找一个"什么都会一点"的通才，而是会找：                 │
+│                                                             │
+│  ┌─────────────┐   ┌─────────────┐   ┌─────────────┐       │
+│  │ 代码审查员  │   │ 专业翻译员  │   │ 数据分析师  │       │
+│  │             │   │             │   │             │       │
+│  │ ✓ 受过专业  │   │ ✓ 持有翻译  │   │ ✓ 统计学背景│       │
+│  │   训练      │   │   资格证    │   │ ✓ 熟练使用  │       │
+│  │ ✓ 熟悉代码  │   │ ✓ 熟悉专业  │   │   分析工具  │       │
+│  │   规范      │   │   术语      │   │ ✓ 有行业    │       │
+│  │ ✓ 使用专业  │   │ ✓ 使用词典  │   │   经验      │       │
+│  │   工具      │   │   和翻译    │   │ ✓ 使用专业  │       │
+│  │             │   │   记忆库    │   │   软件      │       │
+│  └─────────────┘   └─────────────┘   └─────────────┘       │
+│                                                             │
+│  每个专业人士 = 专业知识 + 专业工具 + 行为规范               │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Skills 就是 AI Agent 的"职业技能证书"**：
+- 当你需要代码审查时，激活 `CodeReviewSkill`
+- 当你需要翻译时，激活 `TranslationSkill`
+- 当你需要数据分析时，激活 `DataAnalysisSkill`
+
+每个 Skill 都包含：
+- **专业知识**（System Prompt）：告诉 Agent 如何像专家一样思考和行为
+- **专业工具**（Tools）：该领域专用的工具集
+- **行为规范**（System Prompt 中的约束）：该领域的最佳实践和注意事项
 
 ### 从人类技能学习角度类比
 
@@ -63,57 +120,224 @@ Skills 在 AI Agent 中的作用与此类似：
 
 ### Skills vs Tools vs Capabilities 概念辨析
 
-| 概念 | 定义 | 特点 | 示例 |
-|------|------|------|------|
-| **Tool（工具）** | 单一功能的函数封装 | 无状态、直接执行、粒度细 | 计算器、文件读取 |
-| **Skill（技能）** | 专业化能力模块 | 有状态、可配置、包含多个工具 | 代码审查、翻译助手 |
-| **Capability（能力）** | 更高层次的综合能力 | 可能包含多个 Skills、更抽象 | 多模态理解、创造性思维 |
+这是初学者最容易混淆的概念。让我们用多个维度来对比：
+
+| 概念 | 定义 | 特点 | 示例 | 代码中的体现 |
+|------|------|------|------|---------|
+| **Tool（工具）** | 单一功能的函数封装 | 无状态、直接执行、粒度细 | 计算器、文件读取 | `BaseTool` 子类，实现 `execute()` 方法 |
+| **Skill（技能）** | 专业化能力模块 | 有状态、可配置、包含多个工具 | 代码审查、翻译助手 | `Skill` 子类，包含 `system_prompt`、`triggers`、多个 `Tool` |
+| **Capability（能力）** | 更高层次的综合能力 | 可能包含多个 Skills、更抽象 | 多模态理解、创造性思维 | 通常是多个 Skills 的组合使用 |
+
+#### 具体代码对比
+
+**Tool 示例** - 单一功能：
+```python
+class CalculatorTool(BaseTool):
+    """只做一件事：数学计算"""
+
+    @property
+    def name(self) -> str:
+        return "calculator"
+
+    def execute(self, **kwargs) -> ToolResult:
+        # 直接执行计算，无状态
+        expression = kwargs.get("expression", "")
+        return ToolResult(status=SUCCESS, output=str(eval(expression)))
+```
+
+**Skill 示例** - 专业化模块：
+```python
+class CodeReviewSkill(Skill):
+    """代码审查专家 - 包含多个工具和专业知识"""
+
+    @property
+    def system_prompt(self) -> str:
+        # 注入专业知识
+        return "你是一位专业的代码审查专家..."
+
+    @property
+    def triggers(self) -> List[str]:
+        # 自动激活条件
+        return ["代码审查", "review", "lint"]
+
+    def get_tools(self) -> List:
+        # 提供多个相关工具
+        return [
+            CodeAnalyzerTool(),    # 代码分析工具
+            StyleLinterTool(),     # 风格检查工具
+            SecurityScannerTool(), # 安全扫描工具
+        ]
+```
+
+#### 一图胜千言
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    能力层次结构                              │
+│                    Tools vs Skills 对比                      │
 │                                                             │
-│                      ┌─────────┐                            │
-│                      │Capability│                           │
-│                      │ (能力)  │                            │
-│                      └────┬────┘                            │
-│                           │                                 │
-│           ┌───────────────┼───────────────┐                 │
-│           │               │               │                 │
-│      ┌────┴────┐    ┌────┴────┐    ┌────┴────┐             │
-│      │ Skill 1  │    │ Skill 2  │    │ Skill 3  │            │
-│      │ (技能)  │    │ (技能)  │    │ (技能)  │            │
-│      └────┬────┘    └────┬────┘    └────┬────┘             │
-│           │               │               │                 │
-│      ┌────┴────┐    ┌────┴────┐    ┌────┴────┐             │
-│      │ Tool   │    │ Tool   │    │ Tool   │                 │
-│      │ (工具) │    │ (工具) │    │ (工具) │                 │
-│      └─────────┘    └─────────┘    └─────────┘             │
+│  Tool（工具）              Skill（技能）                     │
+│  ┌───────────┐            ┌─────────────────────────┐       │
+│  │ calculator│            │   code_review           │       │
+│  │ 单一功能  │            │  专业化能力              │       │
+│  │ 无状态   │            │  ├── system_prompt      │       │
+│  │ 直接执行 │            │  ├── triggers           │       │
+│  └───────────┘            │  ├── tools[]            │       │
+│                           │  │   ├── analyzer       │       │
+│  ┌───────────┐            │  │   ├── linter         │       │
+│  │ search    │            │  │   └── scanner        │       │
+│  │ 单一功能  │            │  └── state              │       │
+│  │ 无状态   │            └─────────────────────────┘       │
+│  │ 直接执行 │                                              │
+│  └───────────┘                                             │
+│                                                             │
+│  关系：一个 Skill 包含多个相关的 Tools                        │
+│       Skill 为 Tools 提供专业知识和使用规范                  │
 │                                                             │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ### Skills 的核心特征
 
-1. **有状态（Stateful）**
-   - Skill 可以维护内部状态和配置
-   - 可以在多次调用之间保持上下文
+理解这四个特征是掌握 Skills 系统的关键。让我们用生活化的例子逐一解释：
 
-2. **可配置（Configurable）**
-   - 可以通过参数定制行为
-   - 可以动态加载/卸载
+#### 1. 有状态（Stateful）
 
-3. **组合性（Composable）**
-   - 多个 Skills 可以协同工作
-   - 可以形成技能链（Skill Chain）
+**生活化类比**：
+- Tool 像一个**计算器**：每次按下 `1+1=` 都得到 `2`，它不记得你之前按过什么
+- Skill 像一个**私人医生**：记得你的病史、过敏记录、用药情况，每次诊断都会参考这些信息
 
-4. **领域专精（Domain-specific）**
-   - 每个 Skill 专注一个特定领域
-   - 提供该领域的专业知识和工具
+**代码示例**：
+```python
+# Tool - 无状态
+class CalculatorTool(BaseTool):
+    def execute(self, **kwargs):
+        # 每次执行都是独立的，不记得之前的调用
+        return eval(kwargs["expression"])
+
+# Skill - 有状态
+class TranslationSkill(Skill):
+    def __init__(self):
+        self._terminology_dict = {}  # 术语词典（状态）
+        self._translation_history = []  # 翻译历史（状态）
+
+    def on_activate(self, context: SkillContext):
+        # 激活时加载用户偏好的术语
+        self._terminology_dict = context.metadata.get("terminology", {})
+```
+
+**为什么需要状态**：
+- 保持一致性：在多轮对话中使用统一的术语
+- 上下文理解：参考历史记录做出更好的决策
+- 个性化服务：记住用户的偏好和配置
+
+#### 2. 可配置（Configurable）
+
+**生活化类比**：
+- Tool 像一把**固定尺寸的扳手**：大小固定，不能调节
+- Skill 像一个**可调节扳手**：可以根据不同场景调整大小和力度
+
+**代码示例**：
+```python
+# 通过 metadata 传递配置
+context = SkillContext(
+    query="审查这段代码",
+    metadata={
+        "language": "python",      # 配置：目标语言
+        "strict_mode": True,       # 配置：严格模式
+        "check_style": True,       # 配置：是否检查风格
+        "check_security": True,    # 配置：是否检查安全
+    }
+)
+
+# Skill 读取配置
+class CodeReviewSkill(Skill):
+    def on_activate(self, context: SkillContext):
+        self.strict_mode = context.metadata.get("strict_mode", False)
+        self.check_style = context.metadata.get("check_style", True)
+```
+
+**配置的使用场景**：
+- 切换模式：严格/宽松、快速/深度
+- 选择功能：启用/禁用某些检查项
+- 定制输出：JSON/Markdown/纯文本格式
+
+#### 3. 组合性（Composable）
+
+**生活化类比**：
+- Tool 像**单个乐器**：钢琴只能弹钢琴的音，小提琴只能拉小提琴的音
+- Skill 像**一支乐队**：多个乐手协作，可以演奏复杂的交响曲
+
+**组合示例**：
+```
+用户请求："分析这份销售数据并用中文生成报告"
+
+┌─────────────────────────────────────────────────────────┐
+│                   Skill 组合执行                         │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│  1. DataAnalysisSkill 分析数据                          │
+│     └── 识别趋势、计算增长率、发现异常                  │
+│                    │                                    │
+│                    ▼                                    │
+│  2. VisualizationSkill 生成图表                         │
+│     └── 创建柱状图、折线图、饼图                        │
+│                    │                                    │
+│                    ▼                                    │
+│  3. TranslationSkill 翻译为中文                         │
+│     └── 将分析报告翻译为用户指定语言                    │
+│                    │                                    │
+│                    ▼                                    │
+│  4. ReportFormattingSkill 格式化报告                     │
+│     └── 按照指定格式生成最终文档                        │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+```
+
+**代码中的组合**：
+```python
+# 多个 Skill 协同工作
+skills = [
+    DataAnalysisSkill(),
+    VisualizationSkill(),
+    TranslationSkill(),
+]
+
+# 组合提示词
+combined_prompt = "\n\n".join([s.system_prompt for s in skills])
+# 组合工具
+all_tools = [tool for s in skills for tool in s.get_tools()]
+```
+
+#### 4. 领域专精（Domain-specific）
+
+**生活化类比**：
+- Tool 像**瑞士军刀**：什么都能做一点，但什么都不精
+- Skill 像**专业工具箱**：牙医有牙医的工具，木匠有木匠的工具
+
+**领域专精的价值**：
+```
+通用 Agent（没有 Skills）:
+  用户："审查这段 Python 代码"
+  Agent: "这段代码看起来不错。我注意到你在计算 1+1，结果是 2。"
+  （泛泛而谈，没有发现实际问题）
+
+CodeReviewSkill:
+  用户："审查这段 Python 代码"
+  Skill: "发现 3 个问题：
+          1. [安全] 第 5 行使用 eval()，存在代码注入风险
+          2. [性能] 第 12 行在循环中重复查询数据库，建议移到循环外
+          3. [风格] 函数名应采用下划线命名法，如 'calculate_total' 而非 'calculateTotal'"
+  （专业、具体、可执行）
+```
 
 ---
 
 ## 1.2 为什么需要 Skills 系统？
+
+> **本节核心问题**：
+> - 为什么不能只用 Tools，非要引入 Skills？
+> - Skills 到底解决了什么 Tools 解决不了的问题？
+> - 实际应用中有哪些典型场景需要 Skills？
 
 ### 单一 Agent 的局限性
 
@@ -217,6 +441,116 @@ Skills 在 AI Agent 中的作用与此类似：
          │
          ▼
 用户收到中文的审查报告
+```
+
+### 关键问题：为什么不能只用 Tools？
+
+这是初学者最常见的问题。让我们通过一个完整的对比来理解：
+
+#### 场景：构建一个代码审查助手
+
+**方案 A：只用 Tools（没有 Skills）**
+
+```python
+# 定义工具
+class CodeAnalyzerTool(BaseTool): ...
+class StyleLinterTool(BaseTool): ...
+class SecurityScannerTool(BaseTool): ...
+
+# 注册到 Agent
+tools = [CodeAnalyzerTool(), StyleLinterTool(), SecurityScannerTool()]
+agent = ReActAgent(llm_client=client, tools=tools)
+
+# 问题出现了...
+result = agent.run("审查这段代码")
+
+# Agent 的响应可能是：
+# "我看到你想让我审查代码。你想让我审查什么代码呢？"
+# 或者
+# "好的，我来执行代码分析工具..."
+# （但没有说明审查标准、输出格式、优先检查什么）
+```
+
+**问题分析**：
+| 问题 | 说明 | 后果 |
+|------|------|------|
+| 缺乏专业指导 | Tools 只是函数，没有告诉 Agent 如何使用 | Agent 可能乱用工具 |
+| 缺乏标准 | 没有定义什么是"好的代码审查" | 输出质量不稳定 |
+| 缺乏流程 | 没有指定工具使用顺序 | 可能先执行安全扫描再语法分析（效率低） |
+| 缺乏格式 | 没有定义输出格式要求 | 每次输出格式不一致 |
+
+**方案 B：使用 Skills**
+
+```python
+class CodeReviewSkill(Skill):
+    @property
+    def system_prompt(self) -> str:
+        return """
+你是一位专业的代码审查专家。
+
+【审查流程】
+1. 先用 analyze_code 分析代码结构
+2. 再用 lint_style 检查代码风格
+3. 最后用 scan_security 进行安全扫描
+
+【输出格式】
+按以下格式输出：
+- 问题严重性分级（严重/一般/建议）
+- 每个问题注明行号和修复建议
+- 最后给出整体评价
+"""
+
+    def get_tools(self):
+        return [CodeAnalyzerTool(), StyleLinterTool(), SecurityScannerTool()]
+
+# 使用 Skill
+agent = ReActAgent(llm_client=client, skills=[CodeReviewSkill()])
+result = agent.run("审查这段代码")
+
+# Agent 的响应：
+# "好的，我将按照专业的代码审查流程进行检查..."
+# （然后按照指定流程使用工具，输出格式化的审查报告）
+```
+
+**Skill 带来的价值**：
+| 价值 | 说明 | 效果 |
+|------|------|------|
+| 专业指导 | System Prompt 告诉 Agent 如何像专家一样思考 | 输出更专业 |
+| 标准化 | 定义了审查标准和输出格式 | 质量稳定可靠 |
+| 流程优化 | 指定了工具使用的最佳顺序 | 执行更高效 |
+| 一致性 | 每次审查都遵循相同的标准 | 用户体验一致 |
+
+#### 总结：Tools vs Skills 的定位
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Tools vs Skills 定位                      │
+│                                                             │
+│  Tools（工具）              Skills（技能）                   │
+│  ┌─────────────┐            ┌─────────────────┐             │
+│  │  "手和脚"   │            │   "大脑 + 手脚"  │             │
+│  │             │            │                 │             │
+│  │ 执行具体    │            │  专业知识       │             │
+│  │ 操作        │            │  + 工具使用     │             │
+│  │             │            │  流程指导       │             │
+│  │ 是被动的    │            │  是主动的       │             │
+│  │             │            │                 │             │
+│  │ 告诉 Agent  │            │ 告诉 Agent      │             │
+│  │ "怎么做"    │            │ "做什么+为什么" │             │
+│  │             │            │                 │             │
+│  │ 单一功能    │            │ 综合能力         │             │
+│  │ 无状态      │            │ 有状态          │             │
+│  └─────────────┘            └─────────────────┘             │
+│                                                             │
+│  关系：                                                      │
+│  - Tools 是 Skills 的"工具箱"                               │
+│  - Skills 是 Tools 的"使用手册 + 专家指导"                  │
+│                                                             │
+│  结论：                                                      │
+│  - 简单任务 → 只用 Tools 就够了                             │
+│  - 专业任务 → 需要 Skills 提供指导和规范                    │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -445,7 +779,127 @@ agent = initialize_agent(tools, OpenAI(), agent="zero-shot-react-description")
 
 # 2. Skill 核心架构深度解析
 
+> **本节导读**：这是本章的技术核心。如果你要创建自定义 Skills，必须理解这一节的内容。我们会深入讲解每一个设计决策背后的"为什么"。
+>
+> **核心问题**：
+> - 为什么 Skill 要用抽象类（ABC）而不是普通类？
+> - 为什么 name 和 description 是抽象属性？
+> - 为什么 system_prompt 是可选的？
+> - 每个属性/方法的设计动机是什么？
+> - 如果不这样设计会有什么问题？
+
+**学习建议**：本节的代码较多，建议先理解每个属性的"设计理由"，再学习如何继承和实现。
+
+---
+
 ## 2.1 Skill 抽象类详解
+
+### 设计动机：为什么需要抽象类？
+
+在深入代码之前，让我们先理解一个关键问题：**为什么 Skill 必须用抽象类（ABC）实现？**
+
+#### 方案对比：三种实现方式
+
+**方案 A：接口（Protocol）** - 不可行
+```python
+from typing import Protocol
+
+class SkillProtocol(Protocol):
+    name: str
+    description: str
+
+    def get_tools(self) -> List: ...
+    def should_activate(self, query: str) -> bool: ...
+
+# 问题：Protocol 无法提供默认实现
+# 每个子类都必须重复实现 should_activate 等通用方法
+```
+
+**方案 B：普通基类** - 有问题
+```python
+class Skill:
+    name = "base_skill"  # 默认值
+    description = "A skill"  # 默认值
+
+    def get_tools(self):
+        return []
+
+    def should_activate(self, query: str) -> bool:
+        # 默认实现
+        return any(t in query for t in self.triggers)
+
+# 问题：子类可能忘记重写 name/description
+# 导致所有技能都叫"base_skill"，无法区分
+```
+
+**方案 C：抽象类（ABC）** - 最佳选择
+```python
+from abc import ABC, abstractmethod
+
+class Skill(ABC):
+    @property
+    @abstractmethod
+    def name(self) -> str:
+        pass
+
+    @property
+    @abstractmethod
+    def description(self) -> str:
+        pass
+
+    # 非抽象方法：提供默认实现
+    def should_activate(self, query: str) -> bool:
+        return any(t in query for t in self.triggers)
+
+# 优点：
+# 1. 强制子类实现必要属性（name, description）
+# 2. 提供通用默认实现（should_activate, on_activate）
+# 3. 无法直接实例化 Skill，避免使用不完整的技能
+```
+
+#### 抽象类的核心优势
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    抽象类的优势                              │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  1. 强制实现                                                  │
+│     ┌─────────────────────────────────────────────────┐    │
+│     │ class CodeReviewSkill(Skill):                   │    │
+│     │     @property                                   │    │
+│     │     def name(self) -> str:                      │    │
+│     │         return "code_review"   # ✓ 必须实现      │    │
+│     │                                                 │    │
+│     │ # 如果忘记实现 name，会在运行时报错              │    │
+│     │ # 而不是等到使用时才发现                         │    │
+│     └─────────────────────────────────────────────────┘    │
+│                                                             │
+│  2. 统一接口                                                 │
+│     ┌─────────────────────────────────────────────────┐    │
+│     │ # SkillManager 可以安全地调用任何 Skill 的属性   │    │
+│     │ for skill in skills:                            │    │
+│     │     print(skill.name)          # ✓ 一定存在     │    │
+│     │     print(skill.description)   # ✓ 一定存在     │    │
+│     │     skill.on_activate(ctx)     # ✓ 一定有该方法 │    │
+│     └─────────────────────────────────────────────────┘    │
+│                                                             │
+│  3. 默认实现                                                 │
+│     ┌─────────────────────────────────────────────────┐    │
+│     │ # 子类可以选择性重写                             │    │
+│     │ class SmartSkill(Skill):                        │    │
+│     │     # 必须实现的抽象属性                         │    │
+│     │     name = "smart"                              │    │
+│     │     description = "A smart skill"               │    │
+│     │                                                 │    │
+│     │     # 可以重写的可选方法                         │    │
+│     │     def should_activate(self, query):           │    │
+│     │         # 使用更复杂的 AI 判断逻辑               │    │
+│     │         return ai_judge(query)                  │    │
+│     └─────────────────────────────────────────────────┘    │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+```
 
 ### 完整源码（带详细注释）
 
@@ -674,6 +1128,274 @@ class Skill(ABC):
         """
         logger.debug(f"Skill {self.name} deactivated")
 
+---
+
+### 实战：从零开始创建一个 Skill
+
+让我们通过一个完整的示例，学习如何从零开始创建一个自定义 Skill。
+
+#### 场景：创建一个天气查询 Skill
+
+**需求分析**：
+- 功能：查询天气预报和实时天气
+- 触发词："天气"、"weather"、"下雨"、"气温"
+- 工具：需要一个天气查询工具
+- 专业知识：需要了解天气术语、穿衣建议等
+
+#### 步骤 1：定义工具
+
+首先创建天气查询工具：
+
+```python
+from src.tools.base import BaseTool, ToolResult, ToolResultStatus
+from typing import Dict, Any
+
+class WeatherQueryTool(BaseTool):
+    """查询天气信息的工具"""
+
+    @property
+    def name(self) -> str:
+        return "query_weather"
+
+    @property
+    def description(self) -> str:
+        return "查询指定城市的实时天气和天气预报"
+
+    @property
+    def parameters(self) -> dict:
+        return {
+            "type": "object",
+            "properties": {
+                "city": {
+                    "type": "string",
+                    "description": "城市名称，如'北京'、'New York'"
+                },
+                "days": {
+                    "type": "integer",
+                    "description": "预报天数（1-7），默认为 1"
+                }
+            },
+            "required": ["city"]
+        }
+
+    def execute(self, **kwargs) -> ToolResult:
+        city = kwargs.get("city", "")
+        days = kwargs.get("days", 1)
+
+        # 实际实现中，这里会调用天气 API
+        # 这里返回模拟数据
+        return ToolResult(
+            status=ToolResultStatus.SUCCESS,
+            output={
+                "city": city,
+                "temperature": "25°C",
+                "condition": "晴",
+                "humidity": "60%",
+                "forecast": [{"date": "2024-01-01", "condition": "晴", "high": "28°C", "low": "20°C"}]
+            }
+        )
+```
+
+**设计要点**：
+- 工具只做一件事：查询天气数据
+- 参数定义清晰：city 必填，days 可选
+- 返回结构化数据：便于后续处理
+
+#### 步骤 2：创建 Skill 类
+
+然后创建 WeatherSkill 类：
+
+```python
+from src.skills.base import Skill, SkillContext
+from typing import List
+
+class WeatherSkill(Skill):
+    """天气查询技能"""
+
+    # 1. 实现必要属性
+    @property
+    def name(self) -> str:
+        return "weather"
+
+    @property
+    def description(self) -> str:
+        return "查询城市天气信息，提供穿衣和出行建议"
+
+    # 2. 定义系统提示词（注入专业知识）
+    @property
+    def system_prompt(self) -> str:
+        return """
+你是专业的天气助手，提供准确的天气信息和实用建议。
+
+【核心职责】
+1. 查询实时天气和天气预报
+2. 解释天气术语（如 PM2.5、紫外线指数）
+3. 提供穿衣、出行、运动建议
+
+【回答格式】
+请按以下格式回答：
+- 📍 地点：[城市名]
+- 🌡️ 当前温度：[温度]
+- ☀️ 天气状况：[状况]
+- 💧 湿度：[湿度]
+- 📅 预报：[未来几天预报]
+- 💡 建议：[穿衣/出行建议]
+
+【注意事项】
+- 温度同时提供摄氏和华氏
+- 提醒极端天气风险
+- 敏感人群（老人、儿童）特别说明
+"""
+
+    # 3. 定义触发词
+    @property
+    def triggers(self) -> List[str]:
+        return [
+            # 中文
+            "天气", "气温", "下雨", "晴天", "多云",
+            "雾霾", "紫外线", "穿衣建议", "天气预报",
+            # 英文
+            "weather", "temperature", "rainy", "sunny",
+            "forecast", "umbrella",
+        ]
+
+    # 4. 提供工具
+    def get_tools(self) -> List:
+        return [WeatherQueryTool()]
+
+    # 5. 可选：自定义激活逻辑
+    def should_activate(self, query: str) -> bool:
+        # 基础：关键词匹配
+        if super().should_activate(query):
+            return True
+
+        # 高级：识别天气相关的意图
+        # 例如："我明天该穿什么？" 也与天气相关
+        if "穿什么" in query or "带伞" in query:
+            return True
+
+        return False
+
+    # 6. 可选：激活时初始化
+    def on_activate(self, context: SkillContext) -> None:
+        super().on_activate(context)
+        # 可以从上下文读取用户偏好
+        self.user_city = context.metadata.get("preferred_city", "北京")
+        print(f"[WeatherSkill] 已激活，默认城市：{self.user_city}")
+
+    # 7. 可选：停用时清理
+    def on_deactivate(self) -> None:
+        print(f"[WeatherSkill] 已停用")
+        super().on_deactivate()
+```
+
+#### 步骤 3：使用 Skill
+
+创建完成后，可以在 Agent 中使用：
+
+```python
+from src.agent import ReActAgent
+from src.llm import MockClient
+from src.skills import SkillManager, WeatherSkill
+
+# 创建管理器并注册技能
+manager = SkillManager()
+manager.register_skill(WeatherSkill())
+
+# 创建 Agent 并集成技能
+agent = ReActAgent(
+    llm_client=MockClient(),
+    skill_manager=manager,
+)
+
+# 运行
+result = agent.run("北京今天天气怎么样？")
+print(result)
+```
+
+#### 参考输出
+
+```
+[WeatherSkill] 已激活，默认城市：北京
+
+📍 地点：北京
+🌡️ 当前温度：25°C (77°F)
+☀️ 天气状况：晴
+💧 湿度：60%
+📅 预报：
+   - 明天：晴，28°C/20°C
+   - 后天：多云，26°C/19°C
+💡 建议：
+   - 穿衣：短袖 + 薄外套，早晚温差较大
+   - 出行：适宜出行，注意防晒
+   - 敏感人群：紫外线中等，建议涂抹防晒霜
+
+[WeatherSkill] 已停用
+```
+
+---
+
+### 常见错误示例
+
+以下是初学者常见的错误，请避免：
+
+**错误 1：忘记实现抽象属性**
+```python
+# ❌ 错误：会抛出 TypeError
+class IncompleteSkill(Skill):
+    # 忘记实现 name 和 description
+    pass
+
+# TypeError: Can't instantiate abstract class IncompleteSkill
+# with abstract methods name, description
+```
+
+**错误 2：name 重复**
+```python
+# ❌ 错误：两个技能都叫"helper"
+class WeatherHelper(Skill):
+    @property
+    def name(self) -> str:
+        return "helper"  # 会与其他"helper"冲突
+
+class TranslationHelper(Skill):
+    @property
+    def name(self) -> str:
+        return "helper"  # 重复！
+```
+
+**错误 3：system_prompt 返回无意义内容**
+```python
+# ❌ 错误：提示词太模糊
+@property
+def system_prompt(self) -> str:
+    return "你是一个助手"  # 没有提供任何专业指导
+
+# ✓ 正确：提供具体的专业指导
+@property
+def system_prompt(self) -> str:
+    return """
+    你是专业的天气助手...
+    【核心职责】...
+    【回答格式】...
+    """
+```
+
+**错误 4：triggers 包含太常见的词**
+```python
+# ❌ 错误：会过度触发
+@property
+def triggers(self) -> List[str]:
+    return ["你好", "帮助", "什么", "怎么"]  # 这些词太常见
+
+# ✓ 正确：使用特定领域的词
+@property
+def triggers(self) -> List[str]:
+    return ["天气", "weather", "气温", "下雨"]  # 与功能强相关
+```
+
+---
+
     def should_activate(self, query: str) -> bool:
         """
         Determine if this skill should activate for a query.
@@ -868,6 +1590,121 @@ def on_deactivate(self) -> None:
 ---
 
 ## 2.2 SkillContext 上下文类深度解析
+
+> **本节核心问题**：
+> - 为什么 Skill 需要 Context？直接传递参数不行吗？
+> - Context 的每个字段在什么场景下使用？
+> - 如何正确设计和传递 Context？
+
+### 为什么需要 Context？
+
+这是一个很好的问题。让我们通过对比来理解：
+
+#### 方案对比：两种设计方式
+
+**方案 A：不使用 Context（直接传递参数）**
+
+```python
+class Skill(ABC):
+    @abstractmethod
+    def on_activate(self, query: str, agent: Any, memory: Any, tools: Any) -> None:
+        pass
+
+    @abstractmethod
+    def execute(self, query: str, agent: Any, memory: Any, tools: Any) -> Any:
+        pass
+
+# 使用
+skill.on_activate(query, agent, memory, tools)  # 参数列表很长
+result = skill.execute(query, agent, memory, tools)  # 每次都要传所有参数
+```
+
+**问题分析**：
+| 问题 | 说明 | 后果 |
+|------|------|------|
+| 参数列表过长 | 每次调用都要传递所有参数 | 代码冗长、易出错 |
+| 扩展困难 | 如果需要添加新参数（如 config） | 所有方法签名都要修改 |
+| 可选参数复杂 | agent/memory 可能为 None | 需要多个重载或默认值 |
+| 测试困难 | 测试时需要构造完整的参数列表 | 测试代码复杂 |
+
+**方案 B：使用 Context（当前设计）**
+
+```python
+@dataclass
+class SkillContext:
+    query: str
+    agent: Optional[Any] = None
+    memory: Optional[Any] = None
+    tools: Optional[Any] = None
+    metadata: Dict[str, Any] = field(default_factory=dict)
+
+class Skill(ABC):
+    def on_activate(self, context: SkillContext) -> None:
+        pass
+
+# 使用
+context = SkillContext(query="hello", metadata={"key": "value"})
+skill.on_activate(context)  # 只传一个对象
+```
+
+**优势**：
+| 优势 | 说明 | 效果 |
+|------|------|------|
+| 参数封装 | 所有参数打包在一个对象中 | 方法签名简洁 |
+| 易于扩展 | 添加新字段只需修改 Context | 不影响现有代码 |
+| 可选字段 | 使用默认值，按需传递 | 灵活、安全 |
+| 便于测试 | 可以轻松创建 Mock Context | 测试代码简单 |
+
+### Context 传递机制流程图
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    Context 传递流程                              │
+│                                                                 │
+│  用户请求                                                        │
+│     │                                                           │
+│     ▼                                                           │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │ SkillManager.detect_skills(query)                       │   │
+│  │ - 检测哪些 Skill 应该激活                                 │   │
+│  └─────────────────────────────────────────────────────────┘   │
+│     │                                                           │
+│     ▼                                                           │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │ 创建 Context                                            │   │
+│  │ context = SkillContext(                                 │   │
+│  │     query=query,                                        │   │
+│  │     agent=self._agent,                                  │   │
+│  │     memory=self._memory,                                │   │
+│  │     tools=self._tools,                                  │   │
+│  │     metadata={"user_id": "123", "session": "abc"}       │   │
+│  │ )                                                       │   │
+│  └─────────────────────────────────────────────────────────┘   │
+│     │                                                           │
+│     ▼                                                           │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │ Skill.on_activate(context)                              │   │
+│  │ - Skill 读取 context.query 了解用户请求                  │   │
+│  │ - Skill 读取 context.metadata 获取配置                   │   │
+│  │ - Skill 可以使用 context.agent/memory/tools（如果需要） │   │
+│  └─────────────────────────────────────────────────────────┘   │
+│     │                                                           │
+│     ▼                                                           │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │ Skill 执行任务                                          │   │
+│  │ - 使用自己的工具                                        │   │
+│  │ - 必要时通过 context.tools 调用其他工具                 │   │
+│  └─────────────────────────────────────────────────────────┘   │
+│     │                                                           │
+│     ▼                                                           │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │ Skill.on_deactivate()                                   │   │
+│  │ - 清理资源                                              │   │
+│  │ - 可以将结果写入 context.metadata（供后续使用）         │   │
+│  └─────────────────────────────────────────────────────────┘   │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
 
 ### 完整定义
 
@@ -1303,6 +2140,134 @@ class FilesystemSkill(Skill):
 
 ## 3.1 SkillManager 的核心职责
 
+# 3. SkillManager 技能管理器
+
+> **本节导读**：如果把 Skills 比作"专业人士"，那么 SkillManager 就是"人力资源经理"。它负责招聘（注册）、调度（激活）、和协调（组合）所有技能。
+>
+> **核心问题**：
+> - 为什么需要 SkillManager？让 Agent 直接管理 Skills 不行吗？
+> - SkillManager 如何解决技能冲突和优先级问题？
+> - 技能检测和激活的完整流程是什么？
+
+### 为什么需要 SkillManager？
+
+这是一个很好的问题。让我们通过对比来理解：
+
+#### 方案对比：两种管理方式
+
+**方案 A：没有 SkillManager（Agent 直接管理）**
+
+```python
+class ReActAgent:
+    def __init__(self):
+        self.skills = []  # Agent 直接管理技能列表
+
+    def add_skill(self, skill):
+        self.skills.append(skill)
+
+    def run(self, query):
+        # Agent 需要自己处理：
+        # 1. 检测哪些技能应该激活
+        # 2. 按什么顺序激活
+        # 3. 如何组合提示词
+        # 4. 如何管理工具
+        # ... 代码会变得很复杂
+
+        for skill in self.skills:
+            if skill.should_activate(query):
+                # 激活逻辑
+                skill.on_activate(context)
+
+        # 组合提示词
+        prompt = "\n".join([s.system_prompt for s in self.skills])
+
+        # ... 更多逻辑
+```
+
+**问题分析**：
+| 问题 | 说明 | 后果 |
+|------|------|------|
+| 职责混乱 | Agent 既要执行任务，又要管理技能 | 代码臃肿、难以维护 |
+| 缺乏抽象 | 技能管理逻辑分散在 Agent 各处 | 难以理解和修改 |
+| 难以复用 | 每个 Agent 都要重新实现管理逻辑 | 重复代码多 |
+| 测试困难 | 测试 Agent 时要同时测试技能管理 | 测试用例复杂 |
+
+**方案 B：使用 SkillManager（当前设计）**
+
+```python
+class SkillManager:
+    """专职管理技能"""
+
+    def register_skill(self, skill): ...
+    def detect_skills(self, query): ...
+    def get_combined_prompt(self): ...
+    def get_tools_for_skills(self): ...
+
+class ReActAgent:
+    def __init__(self, skill_manager: SkillManager):
+        self.skill_manager = skill_manager  # 委托管理
+
+    def run(self, query):
+        # 简洁清晰的逻辑
+        skills = self.skill_manager.detect_skills(query)
+        prompt = self.skill_manager.get_combined_prompt(skills)
+        tools = self.skill_manager.get_tools_for_skills(skills)
+        # Agent 专注于核心逻辑
+```
+
+**优势**：
+| 优势 | 说明 | 效果 |
+|------|------|------|
+| 单一职责 | SkillManager 专注技能管理 | 代码清晰、易维护 |
+| 高度抽象 | 封装复杂的管理逻辑 | 使用简单 |
+| 可复用 | 任何 Agent 都可以使用 | 减少重复代码 |
+| 易测试 | 可以独立测试技能管理 | 测试用例简单 |
+
+### 生动类比：SkillManager 是"人力资源经理"
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    SkillManager 类比                          │
+│                                                             │
+│  公司组织架构                                                 │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │                  CEO (Agent)                         │   │
+│  │                     │                                │   │
+│  │                     ▼                                │   │
+│  │  ┌────────────────────────────────────────────┐     │   │
+│  │  │           HR Manager (SkillManager)        │     │   │
+│  │  │                                            │     │   │
+│  │  │  职责：                                    │     │   │
+│  │  │  1. 招聘（register_skill）招聘人才         │     │   │
+│  │  │  2. 调度（detect_skills）分配任务          │     │   │
+│  │  │  3. 协调（get_combined_prompt）统一指令    │     │   │
+│  │  │  4. 管理（activate/deactivate）上下岗      │     │   │
+│  │  └────────────────────────────────────────────┘     │   │
+│  │                     │                                │   │
+│  │         ┌───────────┼───────────┐                    │   │
+│  │         ▼           ▼           ▼                    │   │
+│  │  ┌──────────┐ ┌──────────┐ ┌──────────┐             │   │
+│  │  │ 程序员   │ │ 设计师   │ │ 产品经理  │             │   │
+│  │  │ (Skill)  │ │ (Skill)  │ │ (Skill)  │             │   │
+│  │  └──────────┘ └──────────┘ └──────────┘             │   │
+│  │                     │                                │   │
+│  │         ┌───────────┼───────────┐                    │   │
+│  │         ▼           ▼           ▼                    │   │
+│  │    [工具]      [工具]      [工具]                     │   │
+│  │                                                             │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                             │
+│  工作流程：                                                   │
+│  1. 项目来了（用户请求）                                      │
+│  2. HR 识别需要哪些人才（detect_skills）                     │
+│  3. HR 召集人才并分配任务（activate_skill）                  │
+│  4. 人才各自使用工具完成工作（get_tools）                    │
+│  5. HR 汇总成果（get_combined_prompt）                       │
+│  6. 项目完成，人才解散（deactivate_skill）                   │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
 SkillManager 是 Skills 系统的"中枢神经"，负责管理所有技能的注册、激活、停用和协调。
 
 ```
@@ -1698,6 +2663,69 @@ class SkillManager:
 
 ## 3.3 注册机制详解
 
+### 技能的生命周期与状态转换
+
+技能从创建到停用，会经历以下状态：
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    技能状态转换图                                │
+│                                                                 │
+│                                                                 │
+│      ┌──────────┐                                               │
+│      │  未注册   │                                               │
+│      │ Unregistered│                                            │
+│      └─────┬────┘                                               │
+│            │                                                    │
+│            │ register_skill()                                   │
+│            ▼                                                    │
+│      ┌──────────┐                                               │
+│      │  已注册   │                                               │
+│      │ Registered│                                              │
+│      └─────┬────┘                                               │
+│            │                                                    │
+│            │ detect_skills() + 匹配                              │
+│            ▼                                                    │
+│      ┌──────────┐                                               │
+│      │  待激活   │                                               │
+│      │  Pending  │                                               │
+│      └─────┬────┘                                               │
+│            │                                                    │
+│            │ activate_skill()                                   │
+│            ▼                                                    │
+│      ┌──────────┐                                               │
+│      │  已激活   │◄──────────────────┐                          │
+│      │  Active  │                    │                          │
+│      └─────┬────┘                    │                          │
+│            │                         │                          │
+│            │ deactivate_skill()      │ re-activate              │
+│            ▼                         │                          │
+│      ┌──────────┐                    │                          │
+│      │  已停用   │────────────────────┘                          │
+│      │Inactive  │   (可重新激活)                                 │
+│      └─────┬────┘                                               │
+│            │                                                    │
+│            │ unregister_skill()                                 │
+│            ▼                                                    │
+│      ┌──────────┐                                               │
+│      │  已注销   │                                               │
+│      │ Removed  │                                               │
+│      └──────────┘                                               │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 各状态详解
+
+| 状态 | 说明 | 如何进入 | 如何退出 | 特点 |
+|------|------|----------|----------|------|
+| **未注册** | 技能实例已创建，但未注册到 Manager | 创建 Skill 实例 | `register_skill()` | 无法被 Agent 使用 |
+| **已注册** | 技能已注册，等待被激活 | `register_skill()` | `detect_skills()` → 待激活 | 可以被查询和激活 |
+| **待激活** | 技能被检测到匹配，等待激活 | `detect_skills()` 返回 | `activate_skill()` | 即将投入工作 |
+| **已激活** | 技能正在工作中 | `activate_skill()` | `deactivate_skill()` | 提供工具和服务 |
+| **已停用** | 技能完成工作，已停止 | `deactivate_skill()` | 可重新激活或注销 | 资源已释放 |
+| **已注销** | 技能从 Manager 移除 | `unregister_skill()` | - | 无法恢复 |
+
 ### 完整注册流程
 
 ```
@@ -1861,6 +2889,84 @@ for query in queries:
 匹配技能：[]
 ```
 
+### 技能检测算法逐步演示
+
+让我们通过一个具体的例子，逐步演示检测算法的执行过程：
+
+**场景**：用户查询 `"请计算 15 * 7 并搜索结果"`
+
+**已注册技能**（按优先级）：
+1. `CalculatorSkill` (priority=1) - triggers: ["calculate", "compute", "math", "计算"...]
+2. `SearchSkill` (priority=0) - triggers: ["search", "find", "搜索"...]
+3. `FilesystemSkill` (priority=-1) - triggers: ["file", "read", "文件"...]
+
+**算法执行步骤**：
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  步骤 1: 初始化结果列表                                          │
+│  detected = []                                                  │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  步骤 2: 按优先级顺序遍历技能                                     │
+│  当前技能：CalculatorSkill (priority=1)                          │
+│                                                                 │
+│  调用 should_activate("请计算 15 * 7 并搜索结果")                    │
+│  - query_lower = "请计算 15 * 7 并搜索结果"                       │
+│  - 遍历 triggers:                                               │
+│      - "calculate" in query_lower?  No                          │
+│      - "计算" in query_lower?       Yes! → 返回 True             │
+│                                                                 │
+│  detected.append(CalculatorSkill)                               │
+│  detected = [CalculatorSkill]                                   │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  步骤 3: 继续遍历下一个技能                                       │
+│  当前技能：SearchSkill (priority=0)                              │
+│                                                                 │
+│  调用 should_activate("请计算 15 * 7 并搜索结果")                    │
+│  - query_lower = "请计算 15 * 7 并搜索结果"                       │
+│  - 遍历 triggers:                                               │
+│      - "search" in query_lower?   No                            │
+│      - "搜索" in query_lower?     Yes! → 返回 True               │
+│                                                                 │
+│  detected.append(SearchSkill)                                   │
+│  detected = [CalculatorSkill, SearchSkill]                      │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  步骤 4: 继续遍历下一个技能                                       │
+│  当前技能：FilesystemSkill (priority=-1)                         │
+│                                                                 │
+│  调用 should_activate("请计算 15 * 7 并搜索结果")                    │
+│  - 遍历所有 triggers...                                         │
+│  - 没有找到匹配 → 返回 False                                    │
+│                                                                 │
+│  不添加到 detected                                              │
+│  detected = [CalculatorSkill, SearchSkill] (不变)               │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  步骤 5: 遍历完成，返回结果                                       │
+│  return [CalculatorSkill, SearchSkill]                          │
+│                                                                 │
+│  最终结果：检测到 2 个技能                                         │
+│  - CalculatorSkill (高优先级，先执行)                             │
+│  - SearchSkill (普通优先级，后执行)                              │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**关键观察**：
+1. **优先级顺序**：高优先级技能先被检测到，会排在结果列表前面
+2. **短路求值**：每个技能找到第一个匹配的触发词就返回 True
+3. **多技能匹配**：一个查询可以匹配多个技能
+
 ---
 
 ## 3.5 组合提示词生成
@@ -1995,6 +3101,93 @@ if __name__ == "__main__":
 3. **风格检查**：确保代码遵循团队规范
 4. **性能建议**：识别性能瓶颈和优化空间
 5. **改进建议**：提供具体的重构建议
+
+### 设计思路：为什么这样设计？
+
+在开始写代码之前，让我们先理解关键的设计决策：
+
+#### 决策 1：为什么需要三个工具，而不是一个？
+
+**方案 A：单一工具**
+```python
+class CodeReviewTool(BaseTool):
+    def execute(self, **kwargs):
+        # 在一个方法中做所有检查
+        # 语法检查...
+        # 风格检查...
+        # 安全检查...
+        return all_results
+```
+
+**问题**：
+- 职责过重：一个工具做太多事情，违反单一职责原则
+- 难以复用：如果只需要安全检查，也要执行语法检查
+- 错误处理复杂：一个检查失败会影响其他检查
+
+**方案 B：多个工具（当前设计）**
+```python
+class CodeAnalyzerTool(BaseTool): ...      # 只负责语法和结构
+class StyleLinterTool(BaseTool): ...       # 只负责风格
+class SecurityScannerTool(BaseTool): ...   # 只负责安全
+```
+
+**优势**：
+- 职责清晰：每个工具只做一件事
+- 灵活组合：可以单独使用某个工具
+- 易于测试：每个工具可以独立测试
+
+#### 决策 2：为什么检查顺序是 analyzer → lint → security？
+
+```
+执行流程：
+1. CodeAnalyzerTool (语法和结构)
+   ↓
+2. StyleLinterTool (风格检查)
+   ↓
+3. SecurityScannerTool (安全检查)
+```
+
+**设计理由**：
+| 顺序 | 工具 | 理由 |
+|------|------|------|
+| 1 | CodeAnalyzer | 语法错误是最基础的问题，先发现 |
+| 2 | StyleLinter | 风格问题次之，不影响功能但影响可读性 |
+| 3 | SecurityScanner | 安全问题最重要，放在最后作为"压轴" |
+
+**实际考虑**：
+- 语法错误可能导致后续检查无法进行（如括号不匹配）
+- 风格问题通常最多，放在中间避免影响心态
+- 安全问题最重要，需要最详细的报告
+
+#### 决策 3：为什么返回结构化数据而不是文本？
+
+**方案 A：返回文本**
+```python
+def execute(self, **kwargs) -> ToolResult:
+    return ToolResult(output="发现 3 个问题：1... 2... 3...")
+```
+
+**问题**：
+- Agent 无法区分问题严重性
+- 无法按类别组织报告
+- 难以生成格式化的输出
+
+**方案 B：返回结构化数据（当前设计）**
+```python
+def execute(self, **kwargs) -> ToolResult:
+    return ToolResult(output={
+        "issues": [
+            {"type": "security", "line": 5, "message": "..."},
+            {"type": "style", "line": 12, "message": "..."}
+        ],
+        "severity": "HIGH"
+    })
+```
+
+**优势**：
+- Agent 可以按严重性排序
+- 可以生成结构化的报告
+- 便于后续处理和分析
 
 ### 工具设计
 
@@ -3626,13 +4819,21 @@ class WebSearchSkill(Skill):
 
 ## 5. Skill 与 Agent 集成
 
-### 5.1 集成模式
+> **本节导读**：学习了 Skills 和 SkillManager 之后，最后一个问题是如何将它们与 Agent 集成。本节介绍三种集成模式，并通过对比帮助你选择最适合的方案。
+>
+> **核心问题**：
+> - 如何将 Skills 集成到现有的 Agent 中？
+> - 三种集成模式各有什么优缺点？
+> - 如何选择适合自己的集成方案？
+
+### 5.1 集成模式总览
 
 将 Skills 系统与 Agent 集成有三种主要模式：
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                 Skill-Agent 集成模式                        │
+│                 Skill-Agent 集成模式对比                      │
+├─────────────────────────────────────────────────────────────┤
 │                                                             │
 │  模式 1：外部 SkillManager + 手动注入提示词                  │
 │  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐     │
@@ -3643,6 +4844,10 @@ class WebSearchSkill(Skill):
 │  │ - prompt    │    │             │    │             │     │
 │  └─────────────┘    └─────────────┘    └─────────────┘     │
 │                                                             │
+│  优点：灵活、可控制     缺点：代码较多                       │
+│  适用：实验、原型开发                                       │
+│                                                             │
+├─────────────────────────────────────────────────────────────┤
 │  模式 2：继承 SkilledReActAgent 内置管理                    │
 │  ┌─────────────────────────────────┐                       │
 │  │      SkilledReActAgent          │                       │
@@ -3651,6 +4856,63 @@ class WebSearchSkill(Skill):
 │  │  │  Manager  │  │  Engine   │  │                       │
 │  │  └───────────┘  └───────────┘  │                       │
 │  └─────────────────────────────────┘                       │
+│                                                             │
+│  优点：开箱即用、API 简洁  缺点：需要继承特定类              │
+│  适用：生产环境、新项目                                     │
+│                                                             │
+├─────────────────────────────────────────────────────────────┤
+│  模式 3：组合模式（装饰器模式）                             │
+│  ┌─────────────┐                                           │
+│  │SkillDecorator◄────────────────┐                         │
+│  │             │                 │                         │
+│  │ - agent     │  ┌───────────┐  │                         │
+│  │ - manager   │──▶│  Agent    │  │                         │
+│  └─────────────┘  └───────────┘  │                         │
+│       ▲                         │                         │
+│       └─────────────────────────┘                         │
+│                                                             │
+│  优点：不修改原有 Agent、灵活  缺点：实现复杂               │
+│  适用：扩展现有 Agent、第三方集成                           │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 三种模式详细对比
+
+| 特性 | 模式 1：外部管理 | 模式 2：内置管理 | 模式 3：装饰器 |
+|------|----------------|----------------|---------------|
+| **灵活性** | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐ |
+| **易用性** | ⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ |
+| **代码量** | 较多 | 最少 | 中等 |
+| **侵入性** | 低 | 中（需继承） | 最低 |
+| **适用场景** | 原型开发 | 生产环境 | 第三方集成 |
+
+### 选择建议
+
+```
+如何选择集成模式？
+
+                    你的需求是什么？
+                          │
+        ┌─────────────────┼─────────────────┐
+        │                 │                 │
+        ▼                 ▼                 ▼
+   快速原型         生产项目          扩展现有
+   实验代码         长期维护          系统
+        │                 │                 │
+        │                 │                 │
+        ▼                 ▼                 ▼
+  ┌───────────┐   ┌───────────┐   ┌───────────┐
+  │  模式 1    │   │  模式 2    │   │  模式 3    │
+  │ 外部管理  │   │ 内置管理  │   │ 装饰器   │
+  └───────────┘   └───────────┘   └───────────┘
+```
+
+- **选择模式 1**：如果你正在学习、实验，或者需要完全控制技能管理流程
+- **选择模式 2**：如果你是新项目，或者希望开箱即用的简洁 API
+- **选择模式 3**：如果你要扩展现有的 Agent，且不想修改原有代码
+
+---
 │                                                             │
 │  模式 3：动态技能加载（插件式）                             │
 │  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐     │
