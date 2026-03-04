@@ -4091,10 +4091,10 @@ if __name__ == "__main__":
 
 答案：文件 src/main.py 的内容如下：
 
-```python
+
 def hello():
     print("Helo")
-```
+
 
 我注意到代码中 "Helo" 可能是拼写错误，应该是 "Hello"。需要我帮你修复吗？
 
