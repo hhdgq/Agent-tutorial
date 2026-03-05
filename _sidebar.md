@@ -9,3 +9,4 @@
   - [第四章 记忆系统详解](/docs/04_memory.md)
   - [第五章 MCP 协议详解](/docs/05_mcp.md)
   - [第六章 Skills 系统详解](/docs/06_skills.md)
+  - [第七章 真实世界的 Agent 架构](/docs/07_real_world_agent.md)
